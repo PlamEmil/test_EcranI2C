@@ -8,11 +8,11 @@ void setup()
 {
   Serial.begin(9600);
   
-  menu.begin();
-  menu.displayMenu();
+  menu.begin(); // Initialize the menu
+  menu.displayMenu(); // Display the menu
 }
 
 void loop()
 {
-  menu.update();
+  menu.update();  // Update the menu
 }
