@@ -3,6 +3,8 @@
 
 #define I2C_ADDR 0x28
 
+void displayMenu();
+
 // Pins pour le joystick
 const int pinJoystickX = A0;
 const int pinJoystickY = A3;
@@ -69,6 +71,35 @@ void clearDisplay()
   Wire.endTransmission();
 }
 
+// Function to display "En attente d'impression"
+void displayWaitingForPrint()
+{
+  clearDisplay();
+
+  // Affiche "En attente d'impression" indéfiniment tant que l'état est "Done"
+
+  Wire.beginTransmission(I2C_ADDR);
+  Wire.write("En attente");
+  Wire.endTransmission();
+  Wire.beginTransmission(I2C_ADDR);
+  Wire.write(0xFE);
+  Wire.write(0x45);
+  Wire.write(0x40); // Position de départ
+  Wire.endTransmission();
+  Wire.beginTransmission(I2C_ADDR);
+  Wire.write("d'impression...");
+  Wire.endTransmission();
+
+  while (digitalRead(pinPrinterStatus) == HIGH)
+    ;
+
+  delay(2000);
+
+  // Retour au menu principal une fois que l'état change
+  selectedItem = 2; // Par défaut, sélectionner "Pause"
+  displayMenu();
+}
+
 // Function to display the menu with the arrow
 void displayMenu()
 {
@@ -83,7 +114,7 @@ void displayMenu()
     if (digitalRead(pinPrinterStatus) == LOW) // Printing
     {
       menuItems = menuItems_Printing;
-      positions_texte_Printing[1] = 0x40; // Aligner le texte du coût
+      positions_texte_Printing[1] = 0x40;
       numItems = 4;
 
       // S'assurer que la flèche est sur une position valide
@@ -95,11 +126,11 @@ void displayMenu()
     else // Done
     {
       menuItems = menuItems_Done;
-      positions_texte_Printing[1] = 0x42; // Aligner le texte du clear bed
+      positions_texte_Printing[1] = 0x42;
       numItems = 2;
 
       // S'assurer que la flèche est sur une position valide
-      selectedItem = 1; // Toujours sur « Clear Bed »
+      selectedItem = 1; // Toujours sur "Clear Bed"
     }
 
     for (int i = 0; i < numItems; i++)
@@ -131,7 +162,6 @@ void displayMenu()
   }
   else
   {
-    // Sous-menu
     const char **submenuItems_Printing;
     int numItems = 3;
 
@@ -178,34 +208,30 @@ void displayMenu()
 void displayChoice(const char *choice)
 {
   clearDisplay();
-  // Display the chosen option on the main screen
+  // Afficher l'option choisie sur l'écran principal
   Wire.beginTransmission(I2C_ADDR);
   Wire.write(0xFE);
   Wire.write(0x45);
-  Wire.write(0x00); // Display the option at the beginning
+  Wire.write(0x00); // Afficher au début
   Wire.endTransmission();
 
   Wire.beginTransmission(I2C_ADDR);
   Wire.write(choice);
   Wire.endTransmission();
 
-  // Wait for a moment to let the user see the choice
+  // Attendre un moment pour permettre à l'utilisateur de voir son choix
   delay(2000);
 
-  // Reset state based on choice
-  if (currentMenu == 2 && strcmp(choice, "Good") == 0)
+  // Si l'utilisateur a choisi un niveau de satisfaction dans le sous-menu "Good"
+  if (currentMenu == 3 || currentMenu == 2) // Sous-menu "Good"
   {
-    // Clear Bed -> Waiting for Print
-    clearDisplay();
-    Wire.beginTransmission(I2C_ADDR);
-    Wire.write("En attente d'impression...");
-    Wire.endTransmission();
-    delay(2000);
+    displayWaitingForPrint(); // Passer en mode "En attente d'impression"
   }
-
+  
+  // Revenir au menu principal si ce n'est pas un choix de satisfaction
   inSubMenu = false;
   currentMenu = 0;
-  selectedItem = 0; // Reset selection
+  selectedItem = 0; // Réinitialiser la sélection
   displayMenu();
 }
 
