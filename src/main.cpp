@@ -1,4 +1,4 @@
-//Code Menu avec joystick et écran OLED
+// Code Menu avec joystick et écran OLED
 
 #include <Arduino.h>
 #include <Wire.h>
@@ -15,12 +15,13 @@ const int deadZone = 1000;     // Minimum de la zone morte
 const int yValueCentre = 2590; // Valeur du centre du joystick
 
 // Menu items
-const char *menuItems[] = {"Pause", "Cancel", "Clear Bed"}; // Pas de "Retour" initialement
-uint8_t positions_texte[] = {0x02, 0x42, 0x16, 0x56};
+const char *menuItems_Printing[] = {"Etat : (printing)", "Cout : (0.39$)", "Pause", "Cancel"};
+uint8_t positions_texte_Menu[] = {0x00, 0x40, 0x16, 0x56};
+uint8_t positions_texte_SubMenu[] = {0x02, 0x42, 0x16, 0x56};
 uint8_t positions_fleche[] = {0x00, 0x40, 0x14, 0x54};
-int selectedItem = 0;
+int selectedItem = 2;
 bool inSubMenu = false;
-int currentMenu = 0; // 0 = Menu principal, 1 = Sous-menu Cancel, 2 = Sous-menu Clear Bed
+int currentMenu = 0; // 0 = Menu principal, 1 = Sous-menu Cancel, 2 = Sous-menu Clear Bed, 3 = Sous-menu Good
 
 // Sous-menus
 const char *subMenuCancel[] = {"Regret", "Fail", "Retour"};
@@ -74,7 +75,7 @@ void displayMenu()
   if (!inSubMenu)
   {
     // Menu principal
-    int numItems = 3;
+    int numItems = 4;
 
     // Loop through menu items and display them on separate lines
     for (int i = 0; i < numItems; i++)
@@ -83,12 +84,12 @@ void displayMenu()
       Wire.beginTransmission(I2C_ADDR);
       Wire.write(0xFE);
       Wire.write(0x45);
-      Wire.write(positions_texte[i]);
+      Wire.write(positions_texte_Menu[i]);
       Wire.endTransmission();
 
       // Display the menu item text
       Wire.beginTransmission(I2C_ADDR);
-      Wire.write(menuItems[i]);
+      Wire.write(menuItems_Printing[i]);
       Wire.endTransmission();
     }
 
@@ -107,20 +108,20 @@ void displayMenu()
   else
   {
     // Sous-menu
-    const char **subMenuItems;
+    const char **submenuItems_Printing;
     int numItems = 3;
 
     if (currentMenu == 1)
     {
-      subMenuItems = subMenuCancel;
+      submenuItems_Printing = subMenuCancel;
     }
     else if (currentMenu == 2)
     {
-      subMenuItems = subMenuClearBed;
+      submenuItems_Printing = subMenuClearBed;
     }
     else if (currentMenu == 3)
     {
-      subMenuItems = subMenuGood;
+      submenuItems_Printing = subMenuGood;
       numItems = 4;
     }
 
@@ -129,11 +130,11 @@ void displayMenu()
       Wire.beginTransmission(I2C_ADDR);
       Wire.write(0xFE);
       Wire.write(0x45);
-      Wire.write(positions_texte[i]);
+      Wire.write(positions_texte_SubMenu[i]);
       Wire.endTransmission();
 
       Wire.beginTransmission(I2C_ADDR);
-      Wire.write(subMenuItems[i]);
+      Wire.write(submenuItems_Printing[i]);
       Wire.endTransmission();
     }
 
@@ -170,7 +171,7 @@ void displayChoice(const char *choice)
   // After displaying the choice, return to the main menu
   inSubMenu = false;
   currentMenu = 0;
-  selectedItem = 0; // Reset selection to the first item
+  selectedItem = 2; // Reset selection to the first item
   displayMenu();
 }
 
@@ -195,7 +196,14 @@ void loop()
   if (yValue > yValueCentre + deadZone)
   {
     selectedItem++;
-    if (currentMenu == 3)
+    if (currentMenu == 0)
+    {
+      if (selectedItem > 3)
+      {
+        selectedItem = 3;
+      }
+    }
+    else if (currentMenu == 3)
     {
       if (selectedItem > 3)
       {
@@ -215,7 +223,14 @@ void loop()
   else if (yValue < yValueCentre - deadZone)
   {
     selectedItem--;
-    if (selectedItem < 0)
+    if (currentMenu == 0)
+    {
+      if (selectedItem < 2)
+      {
+        selectedItem = 2;
+      }
+    }
+    else if (selectedItem < 0)
     {
       selectedItem = 0;
     }
@@ -229,21 +244,21 @@ void loop()
     delay(200); // Debounce
     if (!inSubMenu)
     {
-      if (strcmp(menuItems[selectedItem], "Pause") == 0)
+      if (strcmp(menuItems_Printing[selectedItem], "Pause") == 0)
       {
-        menuItems[0] = "Resume";
+        menuItems_Printing[2] = "Resume";
       }
-      else if (strcmp(menuItems[selectedItem], "Resume") == 0)
+      else if (strcmp(menuItems_Printing[selectedItem], "Resume") == 0)
       {
-        menuItems[0] = "Pause";
+        menuItems_Printing[2] = "Pause";
       }
-      else if (strcmp(menuItems[selectedItem], "Cancel") == 0)
+      else if (strcmp(menuItems_Printing[selectedItem], "Cancel") == 0)
       {
         inSubMenu = true;
         currentMenu = 1;
         selectedItem = 0;
       }
-      else if (strcmp(menuItems[selectedItem], "Clear Bed") == 0)
+      else if (strcmp(menuItems_Printing[selectedItem], "Clear Bed") == 0)
       {
         inSubMenu = true;
         currentMenu = 2;
@@ -265,7 +280,7 @@ void loop()
       {
         inSubMenu = false;
         currentMenu = 0;
-        selectedItem = 0;
+        selectedItem = 2;
       }
       else
       {
