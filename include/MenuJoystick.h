@@ -12,10 +12,10 @@ public:
     void begin();
     void update();
     void displayMenu();
-    void displayChoice(const char *choice);
-    void displayWaitingForPrint();
 
 private:
+    void displayChoice(const char *choice);
+    void displayWaitingForPrint();
     void clearDisplay();
     void setBrightness(uint8_t brightness);
     void creer_Fleche();
