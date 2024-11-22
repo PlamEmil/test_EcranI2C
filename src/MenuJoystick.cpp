@@ -261,9 +261,13 @@ void MenuJoystick::update()
             if (digitalRead(pinPrinterStatus) == LOW) // Printing
             {
                 if (selectedItem < 2)
+                {
                     selectedItem = 2; // Bloquer sur "Pause" ou "Cancel"
-                if (selectedItem > 3)
+                }
+                else if (selectedItem > 3)
+                {
                     selectedItem = 3; // Pas au-delà de "Cancel"
+                }
             }
             else if (digitalRead(pinPrinterStatus) == HIGH) // Done
             {
@@ -274,10 +278,15 @@ void MenuJoystick::update()
         {
             // Sous-menus - Permet les mouvements entre les options disponibles
             if (currentMenu == 3 && selectedItem > 3)
-                selectedItem = 3; // Sous-menu "Good"
-            else if (selectedItem > 2)
+            {
+                selectedItem = 3; // Sous-menu "Good", ne pas dépasser Fantastic
+            }
+            else if (currentMenu != 3 && selectedItem > 2)
+            {
                 selectedItem = 2; // Autres sous-menus
+            }
         }
+
         displayMenu();
         delay(300);
     }
@@ -289,7 +298,9 @@ void MenuJoystick::update()
             if (digitalRead(pinPrinterStatus) == LOW) // Printing
             {
                 if (selectedItem < 2)
+                {
                     selectedItem = 2; // Pas en dessous de "Pause"
+                }
             }
             else if (digitalRead(pinPrinterStatus) == HIGH) // Done
             {
@@ -298,11 +309,10 @@ void MenuJoystick::update()
         }
         else if (inSubMenu)
         {
-            // Sous-menus - Permet les mouvements entre les options disponibles
-            if (currentMenu == 3 && selectedItem < 0)
-                selectedItem = 0; // Sous-menu "Good"
-            else if (selectedItem < 0)
-                selectedItem = 0; // Autres sous-menus
+            if (selectedItem < 0)
+            {
+                selectedItem = 0; // Pas en dessous de la première option
+            }
         }
         displayMenu();
         delay(300);
