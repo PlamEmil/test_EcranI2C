@@ -226,6 +226,7 @@ void loop()
   // Vérifier si le bouton du joystick est pressé
   if (buttonPressed)
   {
+    delay(200); // Debounce
     if (!inSubMenu)
     {
       if (strcmp(menuItems[selectedItem], "Pause") == 0)
