@@ -228,7 +228,7 @@ void MenuJoystick::displayWaitingForPrint()
     while (digitalRead(pinPrinterStatus) == HIGH)
         ;
 
-    delay(2000);
+    delay(1000);
 
     // Retour au menu principal une fois que l'état change
     selectedItem = 2; // Par défaut, sélectionner "Pause"
