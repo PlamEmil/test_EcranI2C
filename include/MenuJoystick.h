@@ -28,7 +28,7 @@ private:
 
     // Variables globales
     int deadZone;
-    int yValueCentre;
+    int xValueCentre;
     int selectedItem;
     bool inSubMenu;
     int currentMenu;

@@ -4,7 +4,7 @@
 
 MenuJoystick::MenuJoystick(uint8_t joystickX, uint8_t joystickY, uint8_t joystickButton, uint8_t printerStatus)
     : pinJoystickX(joystickX), pinJoystickY(joystickY), pinJoystickButton(joystickButton), pinPrinterStatus(printerStatus),
-      deadZone(1000), yValueCentre(2590), selectedItem(0), inSubMenu(false), currentMenu(0)
+      deadZone(1000), xValueCentre(2590), selectedItem(0), inSubMenu(false), currentMenu(0)
 {
     // Initialisation des textes de menus
     menuItems_Printing = new const char *[4]{"Etat : (printing)", "Cout : (0.39$)", "Pause", "Cancel"};
@@ -228,8 +228,6 @@ void MenuJoystick::displayWaitingForPrint()
     while (digitalRead(pinPrinterStatus) == HIGH)
         ;
 
-    delay(1000);
-
     // Retour au menu principal une fois que l'état change
     selectedItem = 2; // Par défaut, sélectionner "Pause"
     displayMenu();
@@ -237,7 +235,7 @@ void MenuJoystick::displayWaitingForPrint()
 
 void MenuJoystick::update()
 {
-    int yValue = analogRead(pinJoystickY);
+    int xValue = analogRead(pinJoystickX);
     bool buttonPressed = digitalRead(pinJoystickButton) == LOW;
 
     // Vérifier si l'état de l'imprimante a changé
@@ -253,7 +251,7 @@ void MenuJoystick::update()
     }
 
     // Vérifier le mouvement vertical du joystick en dehors de la zone morte
-    if (yValue > yValueCentre + deadZone)
+    if (xValue > xValueCentre + deadZone)
     {
         selectedItem++;
         if (!inSubMenu)
@@ -290,7 +288,7 @@ void MenuJoystick::update()
         displayMenu();
         delay(300);
     }
-    else if (yValue < yValueCentre - deadZone)
+    else if (xValue < xValueCentre - deadZone)
     {
         selectedItem--;
         if (!inSubMenu)
