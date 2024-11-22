@@ -1,5 +1,3 @@
-// Code Menu avec joystick et écran OLED
-
 #include <Arduino.h>
 #include <Wire.h>
 
@@ -10,16 +8,20 @@ const int pinJoystickX = A0;
 const int pinJoystickY = A3;
 const int pinJoystickButton = 26;
 
+// Pin pour le statut de l'imprimante
+const int pinPrinterStatus = 27; // Simule l'état de l'imprimante (0 = printing, 1 = done)
+
 // Seuils pour le joystick
 const int deadZone = 1000;     // Minimum de la zone morte
 const int yValueCentre = 2590; // Valeur du centre du joystick
 
 // Menu items
 const char *menuItems_Printing[] = {"Etat : (printing)", "Cout : (0.39$)", "Pause", "Cancel"};
+const char *menuItems_Done[] = {"Etat : (done)", "  Clear Bed"};
 uint8_t positions_texte_Menu[] = {0x00, 0x40, 0x16, 0x56};
 uint8_t positions_texte_SubMenu[] = {0x02, 0x42, 0x16, 0x56};
 uint8_t positions_fleche[] = {0x00, 0x40, 0x14, 0x54};
-int selectedItem = 2;
+int selectedItem = 0;
 bool inSubMenu = false;
 int currentMenu = 0; // 0 = Menu principal, 1 = Sous-menu Cancel, 2 = Sous-menu Clear Bed, 3 = Sous-menu Good
 
@@ -75,9 +77,29 @@ void displayMenu()
   if (!inSubMenu)
   {
     // Menu principal
-    int numItems = 4;
+    const char **menuItems;
+    int numItems;
 
-    // Loop through menu items and display them on separate lines
+    if (digitalRead(pinPrinterStatus) == LOW) // Printing
+    {
+      menuItems = menuItems_Printing;
+      numItems = 4;
+
+      // S'assurer que la flèche est sur une position valide
+      if (selectedItem < 2)
+        selectedItem = 2;
+      if (selectedItem > 3)
+        selectedItem = 3;
+    }
+    else // Done
+    {
+      menuItems = menuItems_Done;
+      numItems = 2;
+
+      // S'assurer que la flèche est sur une position valide
+      selectedItem = 1; // Toujours sur « Clear Bed »
+    }
+
     for (int i = 0; i < numItems; i++)
     {
       // Set the correct position for each line
@@ -89,7 +111,7 @@ void displayMenu()
 
       // Display the menu item text
       Wire.beginTransmission(I2C_ADDR);
-      Wire.write(menuItems_Printing[i]);
+      Wire.write(menuItems[i]);
       Wire.endTransmission();
     }
 
@@ -168,10 +190,20 @@ void displayChoice(const char *choice)
   // Wait for a moment to let the user see the choice
   delay(2000);
 
-  // After displaying the choice, return to the main menu
+  // Reset state based on choice
+  if (currentMenu == 2 && strcmp(choice, "Good") == 0)
+  {
+    // Clear Bed -> Waiting for Print
+    clearDisplay();
+    Wire.beginTransmission(I2C_ADDR);
+    Wire.write("En attente d'impression...");
+    Wire.endTransmission();
+    delay(2000);
+  }
+
   inSubMenu = false;
   currentMenu = 0;
-  selectedItem = 2; // Reset selection to the first item
+  selectedItem = 0; // Reset selection
   displayMenu();
 }
 
@@ -181,9 +213,21 @@ void setup()
   Serial.begin(9600);
 
   pinMode(pinJoystickButton, INPUT_PULLUP);
+  pinMode(pinPrinterStatus, INPUT_PULLUP); // Simulated printer status
 
   creer_Fleche();
   setBrightness(0x08);
+
+  // Initialiser la position de la flèche selon l'état de l'imprimante
+  if (digitalRead(pinPrinterStatus) == LOW) // Printing
+  {
+    selectedItem = 2; // « Pause » par défaut
+  }
+  else // Done
+  {
+    selectedItem = 1; // « Clear Bed » par défaut
+  }
+
   displayMenu();
 }
 
@@ -192,30 +236,43 @@ void loop()
   int yValue = analogRead(pinJoystickY);
   bool buttonPressed = digitalRead(pinJoystickButton) == LOW;
 
+  // Vérifier si l'état de l'imprimante a changé
+  static int lastPrinterStatus = HIGH;
+  int currentPrinterStatus = digitalRead(pinPrinterStatus);
+  if (currentPrinterStatus != lastPrinterStatus)
+  {
+    lastPrinterStatus = currentPrinterStatus;
+    selectedItem = 0; // Reset selection
+    displayMenu();
+    delay(300);
+    return;
+  }
+
   // Vérifier le mouvement vertical du joystick en dehors de la zone morte
   if (yValue > yValueCentre + deadZone)
   {
     selectedItem++;
-    if (currentMenu == 0)
+    if (!inSubMenu)
     {
-      if (selectedItem > 3)
+      if (digitalRead(pinPrinterStatus) == LOW) // Printing
       {
-        selectedItem = 3;
+        if (selectedItem < 2)
+          selectedItem = 2; // Bloquer sur "Pause" ou "Cancel"
+        if (selectedItem > 3)
+          selectedItem = 3; // Pas au-delà de "Cancel"
+      }
+      else if (digitalRead(pinPrinterStatus) == HIGH) // Done
+      {
+        selectedItem = 1; // Rester sur "Clear Bed"
       }
     }
-    else if (currentMenu == 3)
+    else if (inSubMenu)
     {
-      if (selectedItem > 3)
-      {
-        selectedItem = 3;
-      }
-    }
-    else
-    {
-      if (selectedItem > 2)
-      {
-        selectedItem = 2;
-      }
+      // Sous-menus - Permet les mouvements entre les options disponibles
+      if (currentMenu == 3 && selectedItem > 3)
+        selectedItem = 3; // Sous-menu "Good"
+      else if (selectedItem > 2)
+        selectedItem = 2; // Autres sous-menus
     }
     displayMenu();
     delay(300);
@@ -223,16 +280,25 @@ void loop()
   else if (yValue < yValueCentre - deadZone)
   {
     selectedItem--;
-    if (currentMenu == 0)
+    if (!inSubMenu)
     {
-      if (selectedItem < 2)
+      if (digitalRead(pinPrinterStatus) == LOW) // Printing
       {
-        selectedItem = 2;
+        if (selectedItem < 2)
+          selectedItem = 2; // Pas en dessous de "Pause"
+      }
+      else if (digitalRead(pinPrinterStatus) == HIGH) // Done
+      {
+        selectedItem = 1; // Rester sur "Clear Bed"
       }
     }
-    else if (selectedItem < 0)
+    else if (inSubMenu)
     {
-      selectedItem = 0;
+      // Sous-menus - Permet les mouvements entre les options disponibles
+      if (currentMenu == 3 && selectedItem < 0)
+        selectedItem = 0; // Sous-menu "Good"
+      else if (selectedItem < 0)
+        selectedItem = 0; // Autres sous-menus
     }
     displayMenu();
     delay(300);
@@ -244,30 +310,36 @@ void loop()
     delay(200); // Debounce
     if (!inSubMenu)
     {
-      if (strcmp(menuItems_Printing[selectedItem], "Pause") == 0)
+      if (currentPrinterStatus == LOW) // Printing
       {
-        menuItems_Printing[2] = "Resume";
+        if (strcmp(menuItems_Printing[selectedItem], "Pause") == 0)
+        {
+          menuItems_Printing[2] = "Resume";
+        }
+        else if (strcmp(menuItems_Printing[selectedItem], "Resume") == 0)
+        {
+          menuItems_Printing[2] = "Pause";
+        }
+        else if (strcmp(menuItems_Printing[selectedItem], "Cancel") == 0)
+        {
+          inSubMenu = true;
+          currentMenu = 1;
+          selectedItem = 0;
+        }
       }
-      else if (strcmp(menuItems_Printing[selectedItem], "Resume") == 0)
+      else if (currentPrinterStatus == HIGH) // Done
       {
-        menuItems_Printing[2] = "Pause";
-      }
-      else if (strcmp(menuItems_Printing[selectedItem], "Cancel") == 0)
-      {
-        inSubMenu = true;
-        currentMenu = 1;
-        selectedItem = 0;
-      }
-      else if (strcmp(menuItems_Printing[selectedItem], "Clear Bed") == 0)
-      {
-        inSubMenu = true;
-        currentMenu = 2;
-        selectedItem = 0;
+        if (strcmp(menuItems_Done[selectedItem], "Clear Bed") == 0)
+        {
+          inSubMenu = true;
+          currentMenu = 2;
+          selectedItem = 0;
+        }
       }
     }
     else
     {
-      if (currentMenu == 2 & selectedItem == 0)
+      if (currentMenu == 2 && selectedItem == 0)
       { // Good
         currentMenu = 3;
       }
@@ -280,7 +352,7 @@ void loop()
       {
         inSubMenu = false;
         currentMenu = 0;
-        selectedItem = 2;
+        selectedItem = 0;
       }
       else
       {
@@ -290,7 +362,7 @@ void loop()
     }
 
     displayMenu();
-    while (digitalRead(pinJoystickButton) == 0)
+    while (digitalRead(pinJoystickButton) == LOW)
       ;
   }
 }
