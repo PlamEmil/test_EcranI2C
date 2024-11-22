@@ -17,8 +17,8 @@ const int yValueCentre = 2590; // Valeur du centre du joystick
 
 // Menu items
 const char *menuItems_Printing[] = {"Etat : (printing)", "Cout : (0.39$)", "Pause", "Cancel"};
-const char *menuItems_Done[] = {"Etat : (done)", "  Clear Bed"};
-uint8_t positions_texte_Menu[] = {0x00, 0x40, 0x16, 0x56};
+const char *menuItems_Done[] = {"Etat : (done)", "Clear Bed"};
+uint8_t positions_texte_Printing[] = {0x00, 0x40, 0x16, 0x56};
 uint8_t positions_texte_SubMenu[] = {0x02, 0x42, 0x16, 0x56};
 uint8_t positions_fleche[] = {0x00, 0x40, 0x14, 0x54};
 int selectedItem = 0;
@@ -83,6 +83,7 @@ void displayMenu()
     if (digitalRead(pinPrinterStatus) == LOW) // Printing
     {
       menuItems = menuItems_Printing;
+      positions_texte_Printing[1] = 0x40; // Aligner le texte du coût
       numItems = 4;
 
       // S'assurer que la flèche est sur une position valide
@@ -94,6 +95,7 @@ void displayMenu()
     else // Done
     {
       menuItems = menuItems_Done;
+      positions_texte_Printing[1] = 0x42; // Aligner le texte du clear bed
       numItems = 2;
 
       // S'assurer que la flèche est sur une position valide
@@ -106,7 +108,7 @@ void displayMenu()
       Wire.beginTransmission(I2C_ADDR);
       Wire.write(0xFE);
       Wire.write(0x45);
-      Wire.write(positions_texte_Menu[i]);
+      Wire.write(positions_texte_Printing[i]);
       Wire.endTransmission();
 
       // Display the menu item text
@@ -314,10 +316,12 @@ void loop()
       {
         if (strcmp(menuItems_Printing[selectedItem], "Pause") == 0)
         {
+          menuItems_Printing[0] = "Etat : (paused)";
           menuItems_Printing[2] = "Resume";
         }
         else if (strcmp(menuItems_Printing[selectedItem], "Resume") == 0)
         {
+          menuItems_Printing[0] = "Etat : (printing)";
           menuItems_Printing[2] = "Pause";
         }
         else if (strcmp(menuItems_Printing[selectedItem], "Cancel") == 0)
