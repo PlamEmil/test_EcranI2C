@@ -9,11 +9,12 @@
 
 const char *printerState;
 
+void onRequestHandler();
+
 void setup()
 {
   Wire.begin();
   Wire.onRequest(onRequestHandler);
-
 
   Serial.begin(9600);
 
