@@ -86,6 +86,7 @@ void MenuJoystick::displayMenu()
         int numItems;
 
         char buffer[16];
+        Wire.requestFrom(I2C_ADDRESS, sizeof(buffer) - 1);
         int i = 0;
         while (Wire.available() && i < sizeof(buffer) - 1)
         {
