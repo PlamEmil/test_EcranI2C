@@ -13,7 +13,7 @@ void onRequestHandler();
 
 void setup()
 {
-  Wire.begin();
+  Wire.begin(0x50);
   Wire.onRequest(onRequestHandler);
 
   Serial.begin(9600);
