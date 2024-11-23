@@ -47,8 +47,5 @@ void loop()
 
 void onRequestHandler()
 {
-  char buffer[16] = {0};
-  strncpy(buffer, printerState, sizeof(buffer));
-  Serial.print(buffer);
-  Wire.write(buffer);
+  Wire.write(printerState);
 }
