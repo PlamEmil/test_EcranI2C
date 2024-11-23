@@ -16,7 +16,7 @@ void setup()
   Wire.begin(0x50);
   Wire.onRequest(onRequestHandler);
 
-  Serial.begin(9600);
+  Serial.begin(115200);
 
   connectWiFi();
 }
