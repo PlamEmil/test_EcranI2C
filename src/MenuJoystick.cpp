@@ -1,6 +1,7 @@
 #include "MenuJoystick.h"
 
 #define I2C_ADDR 0x28
+#define I2C_ADDRESS 0x50
 
 MenuJoystick::MenuJoystick(uint8_t joystickX, uint8_t joystickY, uint8_t joystickButton, uint8_t printerStatus)
     : pinJoystickX(joystickX), pinJoystickY(joystickY), pinJoystickButton(joystickButton), pinPrinterStatus(printerStatus),
@@ -83,6 +84,17 @@ void MenuJoystick::displayMenu()
         // Menu principal
         const char **menuItems;
         int numItems;
+
+        char buffer[16];
+        Wire.requestFrom(I2C_ADDRESS, sizeof(buffer));
+        int i = 0;
+        while (Wire.available())
+        {
+            buffer[i++] = Wire.read();
+        }
+        buffer[i] = '\0';
+        Serial.print("Printer state received: ");
+        Serial.println(buffer);
 
         if (digitalRead(pinPrinterStatus) == LOW) // Printing
         {
