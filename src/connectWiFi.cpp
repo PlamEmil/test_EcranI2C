@@ -7,7 +7,8 @@
 void connectWiFi()
 {
     Serial.println("Connexion au Wi-Fi...");
-    WiFi.begin("Plamondon", "Plamondon123");
+    //WiFi.begin("Plamondon", "Plamondon123");
+    WiFi.begin("eduroam", WPA2_AUTH_PEAP, "cvwo@eva.eduroam.ca", "cvwo@eva.eduroam.ca", "pyknm");  
 
     while (WiFi.status() != WL_CONNECTED)
     {

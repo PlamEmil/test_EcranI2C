@@ -36,7 +36,7 @@ void MenuJoystick::begin()
     pinMode(pinJoystickButton, INPUT_PULLUP);
     pinMode(pinPrinterStatus, INPUT_PULLUP);
     creer_Fleche();
-    setBrightness(0x08);
+    setBrightness(0x05);
 }
 
 void MenuJoystick::creer_Fleche()
@@ -84,7 +84,7 @@ void MenuJoystick::displayMenu()
         // Menu principal
         const char **menuItems;
         int numItems;
-
+/*
         char buffer[16];
         Wire.requestFrom(I2C_ADDRESS, sizeof(buffer) - 1);
         int i = 0;
@@ -95,7 +95,7 @@ void MenuJoystick::displayMenu()
         buffer[i] = '\0';
         Serial.print("Printer state received: ");
         Serial.println(buffer);
-
+*/
         if (digitalRead(pinPrinterStatus) == LOW) // Printing
         {
             menuItems = menuItems_Printing;
